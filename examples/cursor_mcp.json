@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "phantombridge": {
+      "command": "phantombridge-mcp",
+      "args": [],
+      "env": {
+        "SOLANA_RPC_URL": "https://api.mainnet-beta.solana.com",
+        "JUPITER_API_URL": "https://lite-api.jup.ag",
+        "DEXSCREENER_API_URL": "https://api.dexscreener.com"
+      }
+    }
+  }
+}
