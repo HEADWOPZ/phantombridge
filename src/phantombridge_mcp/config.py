@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass
 
 
+# Public Solana JSON-RPC. Some gateways (e.g. PublicNode) block getTokenAccountsByOwner.
 DEFAULT_RPC = "https://api.mainnet-beta.solana.com"
 DEFAULT_JUPITER = "https://lite-api.jup.ag"
 DEFAULT_DEXSCREENER = "https://api.dexscreener.com"
@@ -57,7 +58,7 @@ class Settings:
                 "RPC_MISSING",
                 "No Solana RPC URL configured.",
                 details={
-                    "hint": "Set SOLANA_RPC_URL (public default: https://api.mainnet-beta.solana.com)."
+                    "hint": "Set SOLANA_RPC_URL (public default: https://api.mainnet-beta.solana.com).",
                 },
             )
         return self.rpc_url

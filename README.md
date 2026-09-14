@@ -76,7 +76,7 @@ flowchart LR
 
 | Piece | Stack | Role |
 | --- | --- | --- |
-| `phantombridge-mcp` | Python 3.11+ / FastMCP | Five read-only tools, stdio transport |
+| `phantombridge-mcp` | Python 3.11+ / MCP Python SDK (`MCPServer` / FastMCP) | Five read-only tools, stdio transport |
 | `web/` | React + Vite + Phantom Connect SDK | Connect, balances, sign session |
 | `skills/` | Markdown + YAML | `wallet-overview`, `pre-trade-check`, `approval-audit` |
 
@@ -149,7 +149,7 @@ See [`.env.example`](.env.example). Nothing invents a paid key.
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `SOLANA_RPC_URL` | `https://api.mainnet-beta.solana.com` | Public RPC (rate limited). PublicNode / Helius / Triton optional. |
+| `SOLANA_RPC_URL` | `https://api.mainnet-beta.solana.com` | Public JSON-RPC (rate limited). PublicNode may block `getTokenAccountsByOwner`. Helius / Triton optional. |
 | `PHANTOMBRIDGE_REQUIRE_RPC` | `0` | If `1` and URL empty → `RPC_MISSING` |
 | `JUPITER_API_URL` | `https://lite-api.jup.ag` | Public lite Swap API |
 | `JUPITER_API_KEY` | unset | Optional Jupiter portal key |

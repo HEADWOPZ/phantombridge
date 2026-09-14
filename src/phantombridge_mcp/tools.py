@@ -20,6 +20,8 @@ from phantombridge_mcp.rpc import HttpClient
 from phantombridge_mcp.session import resolve_identity
 
 LAMPORTS_PER_SOL = 1_000_000_000
+MAX_TOKEN_ROWS = 50
+MAX_REVOKE_ACCOUNTS = 200
 
 
 def _client(settings: Settings | None = None) -> tuple[Settings, HttpClient]:
@@ -42,7 +44,7 @@ def _token_accounts(http: HttpClient, owner: str) -> list[dict[str, Any]]:
         (TOKEN_2022_PROGRAM, "token-2022"),
     ):
         result = http.rpc(
-            "getParsedTokenAccountsByOwner",
+            "getTokenAccountsByOwner",
             [owner, {"programId": program_id}, {"encoding": "jsonParsed"}],
         )
         for item in (result or {}).get("value") or []:
@@ -82,25 +84,40 @@ def get_balances(pubkey: str | None = None, session_token: str | None = None) ->
             lamports = http.rpc("getBalance", [owner])
             if isinstance(lamports, dict):
                 lamports = lamports.get("value", 0)
-            tokens = _token_accounts(http, owner)
+            token_error = None
+            tokens: list[dict[str, Any]] = []
+            try:
+                tokens = _token_accounts(http, owner)
+            except PhantomBridgeError as exc:
+                token_error = exc.to_dict()["error"]
             non_zero = [
                 t
                 for t in tokens
                 if t.get("amount") not in (None, "0", 0)
             ]
-            return ok(
-                {
-                    "pubkey": owner,
-                    "session_verified": ident["session_verified"],
-                    "sol": {
-                        "lamports": int(lamports or 0),
-                        "sol": int(lamports or 0) / LAMPORTS_PER_SOL,
-                    },
-                    "tokens": non_zero,
-                    "token_account_count": len(tokens),
-                    "non_zero_token_count": len(non_zero),
-                }
-            )
+
+            def _ui(row: dict[str, Any]) -> float:
+                try:
+                    return float(row.get("ui_amount") or 0)
+                except (TypeError, ValueError):
+                    return 0.0
+
+            non_zero.sort(key=_ui, reverse=True)
+            payload: dict[str, Any] = {
+                "pubkey": owner,
+                "session_verified": ident["session_verified"],
+                "sol": {
+                    "lamports": int(lamports or 0),
+                    "sol": int(lamports or 0) / LAMPORTS_PER_SOL,
+                },
+                "tokens": non_zero[:MAX_TOKEN_ROWS],
+                "token_account_count": len(tokens),
+                "non_zero_token_count": len(non_zero),
+                "tokens_truncated": len(non_zero) > MAX_TOKEN_ROWS,
+            }
+            if token_error:
+                payload["token_error"] = token_error
+            return ok(payload)
         finally:
             http.close()
     except Exception as exc:
@@ -132,7 +149,7 @@ def get_recent_txs(
                 if signature:
                     try:
                         parsed = http.rpc(
-                            "getParsedTransaction",
+                            "getTransaction",
                             [
                                 signature,
                                 {"encoding": "jsonParsed", "maxSupportedTransactionVersion": 0},
@@ -245,8 +262,8 @@ def _lp_hints(http: HttpClient, mint: str) -> dict[str, Any]:
 
 
 def _mint_meta(http: HttpClient, mint: str) -> dict[str, Any]:
-    info = http.rpc("getParsedAccountInfo", [mint, {"encoding": "jsonParsed"}])
-    value = (info or {}).get("value")
+    info = http.rpc("getAccountInfo", [mint, {"encoding": "jsonParsed"}])
+    value = (info or {}).get("value") if isinstance(info, dict) else info
     if not value:
         raise PhantomBridgeError("MINT_NOT_FOUND", f"No account found for mint {mint}.")
     parsed = ((value.get("data") or {}).get("parsed") or {})
@@ -377,7 +394,7 @@ def suggest_revokes(
         try:
             ident = _identity(settings, pubkey, session_token)
             owner = ident["pubkey"]
-            tokens = _token_accounts(http, owner)
+            tokens = _token_accounts(http, owner)[:MAX_REVOKE_ACCOUNTS]
             findings: list[dict[str, Any]] = []
 
             for token in tokens:

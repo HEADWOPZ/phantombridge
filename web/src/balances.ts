@@ -49,7 +49,7 @@ async function tokenAccounts(owner: string, programId: string): Promise<TokenRow
         };
       };
     }>;
-  }>("getParsedTokenAccountsByOwner", [
+  }>("getTokenAccountsByOwner", [
     owner,
     { programId },
     { encoding: "jsonParsed" },
